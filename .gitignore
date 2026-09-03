@@ -1,0 +1,39 @@
+# Frontend (Node)
+node_modules/
+dist/
+build/
+
+# Backend (Python)
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+.ruff_cache/
+.mypy_cache/
+
+# Lokale Datenbanken
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+# Umgebungsvariablen
+.env
+.env.*
+!.env.example
+
+# Logs / temp
+*.log
+*.tmp
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tests / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml

@@ -1,0 +1,212 @@
+:root {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    sans-serif;
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --c-primary: var(--p-primary-color);
+  --c-primary-dark: var(--p-primary-hover-color);
+  --c-primary-50: var(--p-highlight-background);
+  --c-primary-100: var(--p-highlight-focus-background);
+  --c-primary-300: var(--p-primary-color);
+  --c-primary-600: var(--p-primary-color);
+  --c-primary-700: var(--p-highlight-color);
+  --c-primary-800: var(--p-highlight-focus-color);
+  --c-primary-contrast: var(--p-primary-contrast-color);
+  --c-text: var(--p-text-color);
+  --c-text-muted: var(--p-text-muted-color);
+  --c-text-secondary: var(--p-text-muted-color);
+  --c-border: var(--p-content-border-color);
+  --c-surface: var(--p-content-background);
+  --c-bg: var(--p-surface-50);
+  --c-danger: var(--p-red-600);
+  --c-warn: var(--p-amber-500);
+  --c-success: var(--p-green-600);
+  --c-bg-elevated: var(--p-content-hover-background);
+  --c-surface-muted: var(--p-surface-200);
+  --c-border-subtle: var(--p-content-border-color);
+  --c-warning-soft: var(--p-amber-50);
+  --c-warning-border: var(--p-amber-200);
+  --c-warning-text: var(--p-amber-700);
+  --booking-train-bg: var(--p-red-100);
+  --booking-train-border: var(--p-red-300);
+  --booking-train-text: var(--p-red-900);
+  --booking-train-badge: var(--p-red-200);
+  --booking-dev-bg: var(--p-amber-100);
+  --booking-dev-border: var(--p-amber-300);
+  --booking-dev-text: var(--p-amber-900);
+  --booking-dev-badge: var(--p-amber-200);
+  --booking-cpu-bg: var(--p-surface-200);
+  --booking-cpu-border: var(--p-surface-300);
+  --booking-cpu-text: var(--p-surface-900);
+  --booking-cpu-badge: var(--p-surface-300);
+  --app-content-width: 1440px;
+  --app-radius-sm: 0.625rem;
+  --app-radius: 0.875rem;
+  --app-radius-lg: 1.125rem;
+  --app-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 6px rgb(15 23 42 / 0.04);
+  --app-shadow: 0 12px 32px -20px rgb(15 23 42 / 0.22);
+}
+
+:root.app-dark {
+  color-scheme: dark;
+  --c-bg: var(--p-surface-950);
+  --c-surface-muted: var(--p-surface-700);
+  --c-danger: var(--p-red-400);
+  --c-success: var(--p-green-400);
+  --c-warning-soft: color-mix(in srgb, var(--p-amber-400) 12%, var(--c-surface));
+  --c-warning-border: color-mix(in srgb, var(--p-amber-400) 38%, var(--c-surface));
+  --c-warning-text: var(--p-amber-300);
+  --booking-train-bg: color-mix(in srgb, var(--p-red-400) 16%, var(--c-surface));
+  --booking-train-border: color-mix(in srgb, var(--p-red-400) 58%, var(--c-surface));
+  --booking-train-text: var(--p-red-100);
+  --booking-train-badge: color-mix(in srgb, var(--p-red-400) 24%, var(--c-surface));
+  --booking-dev-bg: color-mix(in srgb, var(--p-amber-400) 15%, var(--c-surface));
+  --booking-dev-border: color-mix(in srgb, var(--p-amber-400) 52%, var(--c-surface));
+  --booking-dev-text: var(--p-amber-100);
+  --booking-dev-badge: color-mix(in srgb, var(--p-amber-400) 23%, var(--c-surface));
+  --booking-cpu-bg: var(--p-surface-800);
+  --booking-cpu-border: var(--p-surface-600);
+  --booking-cpu-text: var(--p-surface-100);
+  --booking-cpu-badge: var(--p-surface-700);
+  --app-shadow-sm: 0 1px 2px rgb(2 8 23 / 0.16), 0 2px 8px rgb(2 8 23 / 0.14);
+  --app-shadow: 0 14px 36px -20px rgb(2 8 23 / 0.48);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--c-primary-50) 70%, transparent), transparent 28rem),
+    var(--c-bg);
+  color: var(--c-text);
+  min-width: 320px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.text-muted {
+  color: var(--c-text-muted);
+}
+
+.page-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-main {
+  width: 100%;
+  max-width: var(--app-content-width);
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--c-primary-600);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-title {
+  margin: 0;
+  color: var(--c-text);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.page-description {
+  max-width: 48rem;
+  margin: 0.45rem 0 0;
+  color: var(--c-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.surface-panel {
+  border: 1px solid var(--c-border-subtle);
+  border-radius: var(--app-radius-lg);
+  background: color-mix(in srgb, var(--c-surface) 96%, var(--c-primary-50));
+  box-shadow: var(--app-shadow-sm);
+}
+
+.p-card,
+.p-dialog,
+.p-drawer {
+  border: 1px solid var(--c-border-subtle);
+  box-shadow: var(--app-shadow);
+}
+
+.p-card {
+  border-radius: var(--app-radius-lg);
+  overflow: hidden;
+}
+
+.p-button,
+.p-inputtext,
+.p-select,
+.p-multiselect,
+.p-datepicker,
+.p-textarea {
+  border-radius: var(--app-radius-sm);
+}
+
+.p-button {
+  font-weight: 600;
+}
+
+.p-button:not(.p-button-text):not(.p-button-link) {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.p-tabs {
+  --p-tabs-tab-active-color: var(--c-primary-700);
+  --p-tabs-active-bar-background: var(--c-primary);
+}
+
+.gpu-calendar {
+  user-select: none;
+}
+
+.p-button:focus,
+.p-inputtext:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-primary) 18%, transparent);
+}
+
+@media (max-width: 720px) {
+  .page-main {
+    padding-top: 1.25rem;
+  }
+
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-bottom: 1rem;
+  }
+}
