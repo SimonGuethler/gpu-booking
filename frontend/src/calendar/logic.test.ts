@@ -167,6 +167,32 @@ describe('snapToHour / snapRange', () => {
     )
     expect(e.getTime() - s.getTime()).toBe(2 * 3_600_000)
   })
+
+  it('SnapRange: Ende an der Unterkante des Tages schließt die letzte Stunde ein', () => {
+    const weekStart = startOfWeek(new Date(2026, 5, 1))
+    const end = new Date(msFromPointer(0, 264, 170, 264, weekStart))
+    const { start: s, end: e } = snapRange(new Date(2026, 5, 1, 10), end)
+    expect(s.getHours()).toBe(10)
+    expect(e).toEqual(new Date(2026, 5, 2, 0, 0, 0, 0))
+  })
+
+  it('SnapRange: Ende in der letzten Tagesminute schließt die letzte Stunde ein', () => {
+    const { start: s, end: e } = snapRange(
+      new Date(2026, 5, 1, 22, 0),
+      new Date(2026, 5, 1, 23, 59),
+    )
+    expect(s.getHours()).toBe(22)
+    expect(e).toEqual(new Date(2026, 5, 2, 0, 0, 0, 0))
+  })
+
+  it('SnapRange: Ende spät am Abend rundet weiterhin auf die volle Stunde ab', () => {
+    const { start: s, end: e } = snapRange(
+      new Date(2026, 5, 1, 21, 0),
+      new Date(2026, 5, 1, 23, 30),
+    )
+    expect(s.getHours()).toBe(21)
+    expect(e.getHours()).toBe(23)
+  })
 })
 
 describe('segmentByDay', () => {

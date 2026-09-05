@@ -96,9 +96,20 @@
             :options="scheduleOptions"
             option-label="label"
             option-value="value"
+            option-disabled="disabled"
             :allow-empty="false"
             class="w-full"
           />
+          <small
+            v-if="errors.schedule"
+            class="field-error"
+          >{{ errors.schedule }}</small>
+          <small
+            v-else-if="isSeriesEdit"
+            class="hint"
+          >
+            Serien bestehen aus täglichen Zeitfenstern – „Durchgehend“ ist bei Serien nicht möglich.
+          </small>
           <div
             v-if="values.schedule === 'daily'"
             class="daily-time-row"
@@ -267,7 +278,7 @@
                 class="gpu-chip-status"
               >inaktiv</span>
               <span
-                v-if="gpu.memory_mb"
+                v-if="gpu.memory_mb != null"
                 class="gpu-chip-memory"
               >
                 {{ Math.round(gpu.memory_mb / 1024) }} GB
@@ -483,10 +494,10 @@ const modeOptions = [
   { label: MODE_LABELS.cpu, value: 'cpu' },
 ]
 
-const scheduleOptions = [
-  { label: 'Durchgehend', value: 'continuous' },
-  { label: 'Täglich mit Uhrzeit', value: 'daily' },
-]
+const scheduleOptions = computed(() => [
+  { label: 'Durchgehend', value: 'continuous', disabled: isSeriesEdit.value },
+  { label: 'Täglich mit Uhrzeit', value: 'daily', disabled: false },
+])
 
 const modeHint = computed(() => {
   if (values.mode === 'train') {
@@ -515,7 +526,7 @@ function defaultValues(): BookingFormValues {
 }
 
 const schema = computed(() =>
-  toFormValidator(createBookingSchema(isAdmin.value, maxBookingDays.value)),
+  toFormValidator(createBookingSchema(isAdmin.value, maxBookingDays.value, isSeriesEdit.value)),
 )
 
 const { values, errors, meta, handleSubmit, resetForm, setValues, setFieldValue, defineField } =

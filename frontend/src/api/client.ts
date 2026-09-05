@@ -1,4 +1,4 @@
-import type { ApiError } from './types'
+import type { ApiError, ApiErrorDetail } from './types'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL?.trim() || '/api').replace(/\/+$/, '')
 export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized'
@@ -26,6 +26,31 @@ export class ApiRequestError extends Error {
     this.detail = detail
     this.payload = payload
   }
+}
+
+function detailMessage(detail: unknown, status: number): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const entries = detail.filter(
+      (entry): entry is ApiErrorDetail => Boolean(entry) && typeof entry === 'object',
+    )
+    if (entries.length > 0) {
+      return entries
+        .map((entry) => {
+          const field = Array.isArray(entry.loc)
+            ? entry.loc.filter((part) => part !== 'body').join('.')
+            : ''
+          const message = entry.msg ?? 'Ungültige Eingabe'
+          return field ? `${field}: ${message}` : message
+        })
+        .join(' · ')
+    }
+  }
+  if (typeof detail === 'object' && detail !== null) {
+    const { message } = detail as { message?: unknown }
+    if (typeof message === 'string') return message
+  }
+  return `Fehler ${status}`
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -68,13 +93,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       }
     }
     const payload = (body as ApiError | null)?.detail
-    const detail =
-      typeof payload === 'string'
-        ? payload
-        : typeof payload?.message === 'string'
-          ? payload.message
-          : `Fehler ${response.status}`
-    throw new ApiRequestError(response.status, detail, payload)
+    throw new ApiRequestError(response.status, detailMessage(payload, response.status), payload)
   }
   return body as T
 }

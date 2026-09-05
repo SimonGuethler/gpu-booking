@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.config import Settings, get_settings
 from app.deps import get_current_user
 from app.models import User
-from app.schemas import AppConfigOut
+from app.schemas import GPU_MEMORY_MB_MAX, AppConfigOut
 
 router = APIRouter(prefix="/config", tags=["config"])
 
@@ -13,4 +13,7 @@ def read_config(
     _user: User = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
 ) -> AppConfigOut:
-    return AppConfigOut(max_booking_days=settings.max_booking_days)
+    return AppConfigOut(
+        max_booking_days=settings.max_booking_days,
+        gpu_memory_mb_max=GPU_MEMORY_MB_MAX,
+    )

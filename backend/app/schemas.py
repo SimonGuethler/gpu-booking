@@ -6,6 +6,7 @@ from app.models import DEFAULT_COLORS, MODES, ROLES
 
 HOUR_GRID_MSG = "Zeiten müssen auf vollen Stunden liegen (Minute und Sekunde 00)."
 MIN_DURATION_MSG = "Mindestdauer einer Buchung ist 1 Stunde."
+GPU_MEMORY_MB_MAX = 2**31
 
 
 def _to_naive_utc(value: datetime) -> datetime:
@@ -360,7 +361,7 @@ class ServerUpdate(BaseModel):
 
 class GpuCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    memory_mb: int | None = Field(default=None, ge=0, le=2**31)
+    memory_mb: int | None = Field(default=None, ge=0, le=GPU_MEMORY_MB_MAX)
 
     @field_validator("name")
     @classmethod
@@ -370,7 +371,7 @@ class GpuCreate(BaseModel):
 
 class GpuUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
-    memory_mb: int | None = Field(default=None, ge=0, le=2**31)
+    memory_mb: int | None = Field(default=None, ge=0, le=GPU_MEMORY_MB_MAX)
     active: bool | None = None
 
     @field_validator("name")
@@ -477,3 +478,4 @@ def color_palette() -> list[str]:
 
 class AppConfigOut(BaseModel):
     max_booking_days: int
+    gpu_memory_mb_max: int = GPU_MEMORY_MB_MAX

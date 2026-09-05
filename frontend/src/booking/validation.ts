@@ -55,7 +55,7 @@ export function buildDailyIntervals(
   return intervals
 }
 
-export function createBookingSchema(isAdmin: boolean, maxBookingDays: number) {
+export function createBookingSchema(isAdmin: boolean, maxBookingDays: number, seriesEdit = false) {
   return z
     .object({
       mode: z.enum(['train', 'dev', 'cpu']),
@@ -70,6 +70,13 @@ export function createBookingSchema(isAdmin: boolean, maxBookingDays: number) {
       description: z.string(),
     })
     .superRefine((v, ctx) => {
+      if (seriesEdit && v.schedule === 'continuous') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Serien können nur mit täglichen Zeitfenstern bearbeitet werden.',
+          path: ['schedule'],
+        })
+      }
       if (v.projectId == null) {
         ctx.addIssue({ code: 'custom', message: 'Bitte ein Projekt wählen.', path: ['projectId'] })
       }

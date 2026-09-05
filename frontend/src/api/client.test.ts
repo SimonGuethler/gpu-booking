@@ -75,4 +75,26 @@ describe('Cookie-Authentifizierung', () => {
     })
     expect(unauthorized).not.toHaveBeenCalled()
   })
+
+  it('übersetzt 422-Validierungslisten in lesbare Meldungen', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            detail: [
+              { loc: ['body', 'intervals'], msg: 'List should have at least 1 item' },
+              { loc: ['body', 'start_at'], msg: 'Value error, Ende vor Start' },
+            ],
+          }),
+          { status: 422 },
+        ),
+      ),
+    )
+
+    await expect(post('/bookings/series', {})).rejects.toMatchObject({
+      status: 422,
+      message: 'intervals: List should have at least 1 item · start_at: Value error, Ende vor Start',
+    })
+  })
 })

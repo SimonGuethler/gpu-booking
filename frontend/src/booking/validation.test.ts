@@ -22,8 +22,8 @@ function validValues(overrides: Record<string, unknown> = {}): BookingFormValues
   } as BookingFormValues
 }
 
-function errorsFor(values: BookingFormValues, maxBookingDays = 7): string[] {
-  const schema = createBookingSchema(false, maxBookingDays)
+function errorsFor(values: BookingFormValues, maxBookingDays = 7, seriesEdit = false): string[] {
+  const schema = createBookingSchema(false, maxBookingDays, seriesEdit)
   const result = schema.safeParse(values)
   if (result.success) return []
   return result.error.issues.map((issue) => issue.message)
@@ -154,6 +154,29 @@ describe('createBookingSchema (Admin, ohne Limit)', () => {
     const result = schema.safeParse(validValues({ gpuIds: [] }))
     expect(result.success).toBe(false)
     expect(result.error!.issues.some((i) => i.path[0] === 'gpuIds')).toBe(true)
+  })
+})
+
+describe('createBookingSchema (Serie bearbeiten)', () => {
+  it('„Durchgehend“ ist bei Serien ungültig', () => {
+    const errors = errorsFor(validValues({ schedule: 'continuous' }), 7, true)
+    expect(errors).toContain('Serien können nur mit täglichen Zeitfenstern bearbeitet werden.')
+  })
+
+  it('tägliche Serien bleiben gültig', () => {
+    const start = new Date(2026, 5, 1, 10)
+    const errors = errorsFor(
+      validValues({
+        start,
+        end: new Date(2026, 5, 3, 12),
+        schedule: 'daily',
+        dailyStart: '08:00',
+        dailyEnd: '16:00',
+      }),
+      7,
+      true,
+    )
+    expect(errors).toEqual([])
   })
 })
 

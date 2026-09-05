@@ -277,7 +277,7 @@ function cpuBookingsFor(server: Server): Booking[] {
 }
 
 function gpuLabel(gpu: Gpu): string {
-  return gpu.memory_mb ? `${gpu.name} · ${Math.round(gpu.memory_mb / 1024)} GB` : gpu.name
+  return gpu.memory_mb != null ? `${gpu.name} · ${Math.round(gpu.memory_mb / 1024)} GB` : gpu.name
 }
 
 function timeRange(booking: Booking): string {

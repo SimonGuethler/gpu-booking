@@ -108,7 +108,7 @@
                   {{ gpu.name }}
                 </span>
                 <span class="gpu-meta">
-                  <span v-if="gpu.memory_mb">{{ Math.round(gpu.memory_mb / 1024) }} GB</span>
+                  <span v-if="gpu.memory_mb != null">{{ Math.round(gpu.memory_mb / 1024) }} GB</span>
                   <Tag
                     :class="gpu.active ? 'tag-aktiv' : 'tag-inaktiv'"
                     :value="gpu.active ? 'aktiv' : 'inaktiv'"
@@ -371,6 +371,7 @@
             <InputNumber
               v-model="gpuDialog.memoryMb"
               :min="0"
+              :max="gpuMemoryGbMax"
               class="w-full"
               placeholder="z. B. 40"
             />
@@ -623,7 +624,7 @@ import { useToast } from 'primevue/usetoast'
 
 import type { Gpu, Project, Server, User } from '../api/types'
 import { ApiRequestError, del, patch, post } from '../api/client'
-import { useColors, useInvalidateAll, useUsers } from '../composables/useApi'
+import { useAppConfig, useColors, useInvalidateAll, useUsers } from '../composables/useApi'
 import { useServerData } from '../composables/useServerData'
 import AppTopbar from '../components/AppTopbar.vue'
 
@@ -644,6 +645,11 @@ const usersQuery = useUsers()
 const users = computed(() => usersQuery.data.value ?? [])
 const colorsQuery = useColors()
 const userColors = computed(() => colorsQuery.data.value?.length ? colorsQuery.data.value : ['#01adb9'])
+const appConfigQuery = useAppConfig()
+// Fallback, bis die Obergrenze über /config geladen ist (backend/app/schemas.py, GPU_MEMORY_MB_MAX).
+const gpuMemoryGbMax = computed(
+  () => (appConfigQuery.data.value?.gpu_memory_mb_max ?? 2 ** 31) / 1024,
+)
 const loading = computed(() => ({
   servers: serversLoading.value,
   users: usersQuery.isLoading.value,
@@ -800,7 +806,7 @@ function showGpuDialog(server: Server, gpu: Gpu | null): void {
   gpuDialog.serverId = server.id
   gpuDialog.serverName = server.name
   gpuDialog.name = gpu?.name ?? ''
-  gpuDialog.memoryMb = gpu?.memory_mb ? Math.round(gpu.memory_mb / 1024) : null
+  gpuDialog.memoryMb = gpu?.memory_mb != null ? Math.round(gpu.memory_mb / 1024) : null
   gpuDialog.active = gpu?.active ?? true
   gpuDialog.visible = true
 }

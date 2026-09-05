@@ -14,7 +14,7 @@ def test_config_returns_booking_limit(client, alice):
     )
 
     assert response.status_code == 200
-    assert response.json() == {"max_booking_days": 7}
+    assert response.json() == {"max_booking_days": 7, "gpu_memory_mb_max": 2**31}
 
 
 def test_max_booking_days_is_read_from_environment(monkeypatch):

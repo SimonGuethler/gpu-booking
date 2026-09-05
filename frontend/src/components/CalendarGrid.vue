@@ -61,7 +61,7 @@
             <i class="pi pi-microchip" />
             <span>{{ row.name }}</span>
             <span
-              v-if="row.memoryMb"
+              v-if="row.memoryMb != null"
               class="row-memory"
             >
               {{ Math.round(row.memoryMb / 1024) }} GB

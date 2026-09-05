@@ -3,6 +3,7 @@ export type Mode = 'train' | 'dev' | 'cpu'
 
 export interface AppConfig {
   max_booking_days: number
+  gpu_memory_mb_max: number
 }
 
 export interface User {
@@ -83,12 +84,14 @@ export interface ProjectCreate {
 
 export interface ApiError {
   status: number
-  detail: string | ApiErrorDetail
+  detail: string | ApiErrorDetail | ApiErrorDetail[]
 }
 
 export interface ApiErrorDetail {
   code?: string
   message?: string
+  loc?: unknown[]
+  msg?: string
   [key: string]: unknown
 }
 

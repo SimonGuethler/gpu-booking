@@ -115,9 +115,16 @@ export function snapToHour(date: Date): Date {
   return d
 }
 
+const DAY_END_TOLERANCE_MS = 60_000
+
 export function snapRange(start: Date, end: Date): { start: Date; end: Date } {
   const snappedStart = snapToHour(start)
   let snappedEnd = snapToHour(end)
+  const nextDayStart = new Date(end)
+  nextDayStart.setHours(24, 0, 0, 0)
+  if (nextDayStart.getTime() - end.getTime() <= DAY_END_TOLERANCE_MS) {
+    snappedEnd = nextDayStart
+  }
   if (snappedEnd <= snappedStart) snappedEnd = new Date(snappedStart.getTime() + 3600_000)
   return { start: snappedStart, end: snappedEnd }
 }
