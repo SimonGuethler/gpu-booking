@@ -49,7 +49,6 @@ export function useTheme() {
   }
 
   return {
-    theme,
     isDark: computed(() => theme.value === 'dark'),
     toggleTheme,
   }

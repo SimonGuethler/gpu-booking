@@ -174,7 +174,6 @@ import {
   calendarBlockPosition,
   formatGermanDate,
   formatGermanDateTime,
-  formatGermanTime,
   formatHourRange,
   layoutColumns,
   msFromPointer,
@@ -430,11 +429,6 @@ function blockStyle(block: CalBlock): Record<string, string> {
 }
 
 function blockTimeLabel(block: CalBlock): string {
-  const start = new Date(block.start)
-  const end = new Date(block.end)
-  if (start.toDateString() === end.toDateString()) {
-    return `${formatGermanTime(start)}–${formatGermanTime(end)} Uhr`
-  }
   return formatHourRange(block.start, block.end)
 }
 
@@ -454,7 +448,7 @@ function selectionSegments(row: Row): SelectionSeg[] {
   if (!sel || !rowsInSelection.value.has(row.key)) return []
   const snapped = snapRange(new Date(sel.startMs), new Date(sel.endMs))
   const previewStart = snapped.start.getTime()
-  const previewEnd = Math.max(snapped.end.getTime(), previewStart + 3600_000)
+  const previewEnd = snapped.end.getTime()
   const result: SelectionSeg[] = []
   for (let d = 0; d < 7; d++) {
     const segment = segmentByDay(previewStart, previewEnd, dayStartMs(d), dayEndMs(d))
@@ -570,16 +564,11 @@ function finishDrag(commit: boolean): void {
   if (!commit || !sel) return
 
   const snapped = snapRange(new Date(sel.startMs), new Date(sel.endMs))
-  let startMs = snapped.start.getTime()
-  let endMs = snapped.end.getTime()
-  if (endMs - startMs < 3600_000) {
-    endMs = startMs + 3600_000
-  }
   const gpuIds = Array.from(sel.gpuIds).sort((a, b) => a - b)
 
   emit('open-create', {
-    start: new Date(startMs),
-    end: new Date(endMs),
+    start: snapped.start,
+    end: snapped.end,
     gpuIds,
     serverId: sel.serverId,
     mode: sel.mode,
@@ -705,6 +694,7 @@ onBeforeUnmount(() => {
   background: var(--c-surface);
   scrollbar-width: thin;
   scrollbar-color: var(--c-border) transparent;
+  scrollbar-gutter: stable;
 }
 
 .cal-content {

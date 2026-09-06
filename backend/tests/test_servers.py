@@ -1,6 +1,8 @@
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models import Booking, Gpu, Server
 from tests.conftest import (
     auth_headers,
     book,
@@ -107,6 +109,38 @@ def test_delete_server_deactivates_booked_gpus(client, admin, alice, bob):
     servers = client.get("/api/servers", headers=auth_headers(client, "bob")).json()
     assert servers[0]["active"] is False
     assert servers[0]["gpus"][0]["active"] is False
+
+
+def test_server_delete_enforces_sqlite_foreign_keys(client, db, admin, alice):
+    """Raw-SQL-Delete umgeht die ORM-Ebene: nur PRAGMA foreign_keys=ON macht
+    ON DELETE SET NULL/CASCADE auf dem SQLite-Testpfad wirksam."""
+    token = login(client, "admin")
+    server = create_server(client, "cluster", token)
+    project = create_project(client, "P", token)
+    alice_token = login(client, "alice")
+    create_gpu(client, server["id"], "A6000 #0", token)
+    res = book(
+        client,
+        alice_token,
+        gpu_ids=[],
+        mode="cpu",
+        project_id=project["id"],
+        start="2026-06-01T10:00:00",
+        end="2026-06-01T12:00:00",
+        server_id=server["id"],
+    )
+    assert res.status_code == 201
+    db.expire_all()
+    created = db.scalars(select(Booking)).one()
+    assert created.server_id == server["id"]
+
+    db.execute(delete(Server).where(Server.id == server["id"]))
+    db.commit()
+    db.expire_all()
+
+    booking = db.scalars(select(Booking)).one()
+    assert booking.server_id is None
+    assert db.scalars(select(Gpu)).all() == []
 
 
 def test_create_gpu(client, admin):

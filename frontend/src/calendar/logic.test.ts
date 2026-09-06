@@ -14,7 +14,6 @@ import {
   selectionRowIndexes,
   segmentByDay,
   snapRange,
-  snapToHour,
   startOfWeek,
   toNaiveUtc,
 } from './logic'
@@ -144,12 +143,12 @@ describe('startOfWeek', () => {
   })
 })
 
-describe('snapToHour / snapRange', () => {
+describe('snapRange', () => {
   it('rundet auf volle Stunde ab', () => {
-    const d = new Date(2026, 5, 1, 14, 45)
-    const snapped = snapToHour(d)
-    expect(snapped.getHours()).toBe(14)
-    expect(snapped.getMinutes()).toBe(0)
+    const { start: s, end: e } = snapRange(new Date(2026, 5, 1, 14, 45), new Date(2026, 5, 1, 15, 45))
+    expect(s.getHours()).toBe(14)
+    expect(s.getMinutes()).toBe(0)
+    expect(e.getHours()).toBe(15)
   })
 
   it('SnapRange: identische Zeiten ergeben mindestens 1 Stunde', () => {

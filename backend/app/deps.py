@@ -4,7 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.security import AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, decode_access_token, verify_csrf_token
+from app.security import (
+    AUTH_COOKIE_NAME,
+    CSRF_COOKIE_NAME,
+    decode_access_token,
+    epoch_seconds,
+    verify_csrf_token,
+)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -18,7 +24,7 @@ def get_current_user(
     if token is None:
         raise HTTPException(status_code=401, detail="Nicht angemeldet.")
     try:
-        user_id = decode_access_token(token)
+        user_id, password_state = decode_access_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Token ungültig oder abgelaufen.") from None
     user = db.get(User, user_id)
@@ -28,6 +34,11 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Dieses Konto wurde deaktiviert.")
     if not user.approved:
         raise HTTPException(status_code=401, detail="Dieses Konto ist nicht freigegeben.")
+    if user.password_changed_at is not None and password_state < epoch_seconds(user.password_changed_at):
+        raise HTTPException(
+            status_code=401,
+            detail="Deine Session wurde durch eine Passwortänderung beendet. Bitte melde dich neu an.",
+        )
     if credentials is None and request.method not in {"GET", "HEAD", "OPTIONS"}:
         if not verify_csrf_token(
             request.headers.get("X-CSRF-Token"),

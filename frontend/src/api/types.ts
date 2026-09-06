@@ -61,7 +61,7 @@ export interface BookingGpu {
 
 export interface Booking {
   id: number
-  user: Pick<User, 'id' | 'display_name' | 'color' | 'role'>
+  user: Pick<User, 'id' | 'display_name' | 'color'>
   project: { id: number; name: string; members: number[] }
   gpus: BookingGpu[]
   server_id: number | null
@@ -83,7 +83,6 @@ export interface ProjectCreate {
 }
 
 export interface ApiError {
-  status: number
   detail: string | ApiErrorDetail | ApiErrorDetail[]
 }
 

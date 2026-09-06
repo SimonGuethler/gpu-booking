@@ -30,6 +30,18 @@ def _validate_hour_grid(start_at: datetime, end_at: datetime) -> None:
         raise ValueError(HOUR_GRID_MSG)
 
 
+def _validate_mode_resources(mode: str, gpu_ids: list[int], server_id: int | None) -> None:
+    if mode == "cpu":
+        if gpu_ids:
+            raise ValueError("cpu-Buchungen dürfen keine GPUs belegen.")
+        if server_id is None:
+            raise ValueError("Bitte einen Server für die CPU-Buchung wählen.")
+    elif not gpu_ids:
+        raise ValueError("Bitte mindestens eine GPU wählen (train/dev).")
+    elif server_id is not None:
+        raise ValueError("server_id darf nur für CPU-Buchungen gesetzt werden.")
+
+
 def _reject_explicit_null(model: BaseModel, fields: set[str]) -> None:
     for field_name in fields & model.model_fields_set:
         if getattr(model, field_name) is None:
@@ -66,15 +78,7 @@ class BookingInput(BaseModel):
         duration = (end_at - start_at).total_seconds() / 3600
         if duration < 1:
             raise ValueError(MIN_DURATION_MSG)
-        if self.mode == "cpu":
-            if self.gpu_ids:
-                raise ValueError("cpu-Buchungen dürfen keine GPUs belegen.")
-            if self.server_id is None:
-                raise ValueError("Bitte einen Server für die CPU-Buchung wählen.")
-        elif not self.gpu_ids:
-            raise ValueError("Bitte mindestens eine GPU wählen (train/dev).")
-        elif self.server_id is not None:
-            raise ValueError("server_id darf nur für CPU-Buchungen gesetzt werden.")
+        _validate_mode_resources(self.mode, self.gpu_ids, self.server_id)
         return self
 
 
@@ -131,16 +135,7 @@ class BookingSeriesCreate(BaseModel):
 
     @model_validator(mode="after")
     def _validate_resources_and_intervals(self) -> "BookingSeriesCreate":
-        if self.mode == "cpu":
-            if self.gpu_ids:
-                raise ValueError("cpu-Buchungen dürfen keine GPUs belegen.")
-            if self.server_id is None:
-                raise ValueError("Bitte einen Server für die CPU-Buchung wählen.")
-        elif not self.gpu_ids:
-            raise ValueError("Bitte mindestens eine GPU wählen (train/dev).")
-        elif self.server_id is not None:
-            raise ValueError("server_id darf nur für CPU-Buchungen gesetzt werden.")
-
+        _validate_mode_resources(self.mode, self.gpu_ids, self.server_id)
         if self.series_start_at >= self.series_end_at:
             raise ValueError("series_start_at muss vor series_end_at liegen.")
         _validate_hour_grid(self.series_start_at, self.series_end_at)
@@ -168,7 +163,6 @@ class BookingOutUser(BaseModel):
     id: int
     display_name: str
     color: str
-    role: str
 
 
 class BookingOutProject(BaseModel):
@@ -464,8 +458,6 @@ class LoginRequest(BaseModel):
 
 
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
     user: UserOut
 
 

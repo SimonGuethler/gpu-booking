@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -44,17 +44,24 @@ def _set_members(db: Session, project: Project, member_ids: list[int]) -> None:
         m.user_id
         for m in db.scalars(select(ProjectMember).where(ProjectMember.project_id == project.id)).all()
     }
-    for user_id in current - ids:
-        member = db.scalar(
-            select(ProjectMember).where(
-                ProjectMember.project_id == project.id, ProjectMember.user_id == user_id
-            )
+    unknown = sorted(user_id for user_id in ids - current if db.get(User, user_id) is None)
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unbekannte Mitglieder-IDs: {', '.join(map(str, unknown))}",
         )
-        if member is not None:
-            db.delete(member)
+    removed = current - ids
+    if removed:
+        db.execute(
+            delete(ProjectMember)
+            .where(
+                ProjectMember.project_id == project.id,
+                ProjectMember.user_id.in_(removed),
+            )
+            .execution_options(synchronize_session=False)
+        )
     for user_id in ids - current:
-        if db.get(User, user_id) is not None:
-            db.add(ProjectMember(project_id=project.id, user_id=user_id))
+        db.add(ProjectMember(project_id=project.id, user_id=user_id))
 
 
 @router.get("", response_model=list[ProjectOut])
@@ -93,7 +100,8 @@ def create_project(
     db.commit()
     db.expire_all()
     result = _load_project(db, project.id)
-    assert result is not None
+    if result is None:
+        raise RuntimeError("Projekt nach dem Speichern nicht mehr vorhanden.")
     return _to_out(result)
 
 
@@ -128,7 +136,8 @@ def update_project(
     db.commit()
     db.expire_all()
     result = _load_project(db, project.id)
-    assert result is not None
+    if result is None:
+        raise RuntimeError("Projekt nach dem Speichern nicht mehr vorhanden.")
     return _to_out(result)
 
 
@@ -143,7 +152,8 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Projekt nicht gefunden.")
     if not _can_manage(project, user):
         raise HTTPException(status_code=403, detail="Nur Owner oder Admin dürfen das Projekt löschen.")
-    for booking in db.scalars(select(Booking).where(Booking.project_id == project_id)).all():
-        db.delete(booking)
+    db.execute(
+        delete(Booking).where(Booking.project_id == project_id).execution_options(synchronize_session=False)
+    )
     db.delete(project)
     db.commit()

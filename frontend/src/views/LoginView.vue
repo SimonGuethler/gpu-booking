@@ -26,17 +26,24 @@
           @submit.prevent="onSubmit"
         >
           <div
-            v-if="isRegistering"
-            class="field"
+            class="collapse"
+            :class="{ open: isRegistering }"
           >
-            <label for="display-name">Name</label>
-            <InputText
-              id="display-name"
-              v-model="displayName"
-              autocomplete="name"
-              autofocus
-              placeholder="Vor- und Nachname"
-            />
+            <div
+              class="collapse-inner"
+              :inert="!isRegistering"
+            >
+              <div class="field">
+                <label for="display-name">Name</label>
+                <InputText
+                  id="display-name"
+                  v-model="displayName"
+                  autocomplete="name"
+                  autofocus
+                  placeholder="Vor- und Nachname"
+                />
+              </div>
+            </div>
           </div>
           <div class="field">
             <label for="email">E-Mail-Adresse</label>
@@ -59,44 +66,68 @@
               :autocomplete="isRegistering ? 'new-password' : 'current-password'"
               placeholder="Dein Passwort"
             />
-            <small
-              v-if="isRegistering"
-              class="password-hint"
+            <div
+              class="collapse"
+              :class="{ open: isRegistering }"
             >
-              Mindestens 8 Zeichen mit Großbuchstabe, Kleinbuchstabe und Zahl.
-            </small>
+              <div
+                class="collapse-inner"
+                :inert="!isRegistering"
+              >
+                <small class="password-hint">
+                  Mindestens 8 Zeichen mit Großbuchstabe, Kleinbuchstabe und Zahl.
+                </small>
+              </div>
+            </div>
           </div>
           <div
-            v-if="isRegistering"
-            class="field"
+            class="collapse"
+            :class="{ open: isRegistering }"
           >
-            <label for="password-confirmation">Passwort wiederholen</label>
-            <Password
-              id="password-confirmation"
-              v-model="passwordConfirmation"
-              :feedback="false"
-              toggle-mask
-              autocomplete="new-password"
-              placeholder="Passwort erneut eingeben"
-            />
+            <div
+              class="collapse-inner"
+              :inert="!isRegistering"
+            >
+              <div class="field">
+                <label for="password-confirmation">Passwort wiederholen</label>
+                <Password
+                  id="password-confirmation"
+                  v-model="passwordConfirmation"
+                  :feedback="false"
+                  toggle-mask
+                  autocomplete="new-password"
+                  placeholder="Passwort erneut eingeben"
+                />
+              </div>
+            </div>
           </div>
 
-          <Message
-            v-if="error"
-            severity="error"
-            :closable="false"
-            class="login-error"
+          <div
+            class="collapse"
+            :class="{ open: error !== '' || success !== '' }"
           >
-            {{ error }}
-          </Message>
-          <Message
-            v-if="success"
-            severity="success"
-            :closable="false"
-            class="login-error"
-          >
-            {{ success }}
-          </Message>
+            <div
+              class="collapse-inner"
+              :inert="error === '' && success === ''"
+            >
+              <Message
+                v-if="error"
+                severity="error"
+                :closable="false"
+                class="login-error"
+              >
+                {{ error }}
+              </Message>
+              <Message
+                v-if="success"
+                severity="success"
+                :closable="false"
+                class="login-error"
+              >
+                {{ success }}
+              </Message>
+            </div>
+          </div>
 
           <Button
             type="submit"
@@ -126,7 +157,7 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { ApiRequestError, post } from '../api/client'
@@ -142,17 +173,20 @@ const displayName = ref('')
 const passwordConfirmation = ref('')
 const error = ref('')
 const success = ref('')
-const registering = ref(false)
+const isRegistering = ref(false)
 const registrationLoading = ref(false)
-const isRegistering = computed(() => registering.value)
 const submitting = computed(() => authStore.loading || registrationLoading.value)
 
 function toggleMode(): void {
-  registering.value = !registering.value
+  isRegistering.value = !isRegistering.value
   error.value = ''
   success.value = ''
   password.value = ''
   passwordConfirmation.value = ''
+  nextTick(() => {
+    const targetId = isRegistering.value ? 'display-name' : 'email'
+    document.getElementById(targetId)?.focus()
+  })
 }
 
 async function onSubmit(): Promise<void> {
@@ -184,7 +218,7 @@ async function onSubmit(): Promise<void> {
         password: password.value,
         password_confirmation: passwordConfirmation.value,
       })
-      registering.value = false
+      isRegistering.value = false
       password.value = ''
       passwordConfirmation.value = ''
       success.value = response.message

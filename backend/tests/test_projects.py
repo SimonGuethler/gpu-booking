@@ -148,6 +148,35 @@ def test_delete_project_forbidden_for_member(client, admin, alice, bob):
     assert res.status_code == 403
 
 
+def test_create_project_with_unknown_member_fails_completely(client, admin, alice):
+    token = login(client, "alice")
+    res = client.post(
+        "/api/projects",
+        json={"name": "Projekt", "member_ids": [4242]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+    assert "4242" in res.json()["detail"]
+    # Kein Teilzustand: Projekt samt Owner-Mitglied wurde nicht committed.
+    listed = client.get("/api/projects", headers=auth_headers(client, "alice"))
+    assert listed.json() == []
+
+
+def test_mixed_known_and_unknown_members_rejected(client, admin, alice, bob):
+    token = login(client, "alice")
+    project_id = create_project_id(client, "Projekt", token)
+    res = client.patch(
+        f"/api/projects/{project_id}",
+        json={"member_ids": [3, 9999]},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert res.status_code == 400
+    assert "9999" in res.json()["detail"]
+    listed = client.get("/api/projects", headers=auth_headers(client, "alice"))
+    members = {m["id"] for m in listed.json()[0]["members"]}
+    assert members == {2}
+
+
 def create_project_id(client, name: str, token: str) -> int:
     res = client.post("/api/projects", json={"name": name}, headers={"Authorization": f"Bearer {token}"})
     assert res.status_code == 201

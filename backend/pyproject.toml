@@ -19,10 +19,13 @@ dev = [
     "pytest>=9.1.1",
     "httpx>=0.28.1",
     "ruff>=0.16.4",
+    "pytest-xdist[psutil]>=3.8.0",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Serial als Standard: auf langsamen Dateisystemen übersteigen die Spawn-/Importkosten
+# der xdist-Worker die Suite. Bei größerer Suite schnellere Maschine: siehe README.
 addopts = "-q"
 pythonpath = ["."]
 

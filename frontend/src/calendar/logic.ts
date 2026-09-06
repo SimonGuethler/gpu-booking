@@ -109,7 +109,7 @@ export function endOfWeek(weekStart: Date): Date {
   return d
 }
 
-export function snapToHour(date: Date): Date {
+function snapToHour(date: Date): Date {
   const d = new Date(date)
   d.setMinutes(0, 0, 0)
   return d
@@ -129,7 +129,7 @@ export function snapRange(start: Date, end: Date): { start: Date; end: Date } {
   return { start: snappedStart, end: snappedEnd }
 }
 
-export interface SegmentedBlock {
+export interface Interval {
   start: number
   end: number
 }
@@ -139,16 +139,11 @@ export function segmentByDay(
   end: number,
   dayStart: number,
   dayEnd: number,
-): SegmentedBlock | null {
+): Interval | null {
   const from = Math.max(start, dayStart)
   const to = Math.min(end, dayEnd)
   if (to <= from) return null
   return { start: from, end: to }
-}
-
-export interface Interval {
-  start: number
-  end: number
 }
 
 export interface ColumnLayout {

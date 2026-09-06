@@ -167,10 +167,26 @@ const week = useWeek()
 const serverData = useServerData()
 
 const servers = computed<Server[]>(() => serverData.servers.value ?? [])
-const loading = computed(() => serverData.serversLoading.value)
 
 const bookingsQuery = useBookings(() => week.weekStart.value, () => week.weekEnd.value)
 const bookings = computed<Booking[]>(() => bookingsQuery.data.value ?? [])
+
+const bookingsFetchedOnce = ref(false)
+watch(
+  bookingsQuery.data,
+  (data) => {
+    if (data != null) {
+      bookingsFetchedOnce.value = true
+    }
+  },
+  { immediate: true },
+)
+
+const loading = computed(
+  () =>
+    serverData.serversLoading.value ||
+    (!bookingsFetchedOnce.value && bookingsQuery.isFetching.value),
+)
 
 const activeServerId = ref<number | null>(null)
 const activeServers = computed<Server[]>(() => {

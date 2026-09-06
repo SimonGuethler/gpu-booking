@@ -1,26 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
-from app.models import DEFAULT_COLORS, ROLE_ADMIN, Booking, Project, ProjectMember, User
+from app.models import ROLE_ADMIN, Booking, Project, ProjectMember, User, utcnow
 from app.schemas import UserCreate, UserDirectoryOut, UserOut, UserUpdate, color_palette
 from app.security import hash_password
+from app.services.users import next_color
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 LAST_ADMIN_MESSAGE = (
     "Der letzte Administrator kann nicht deaktiviert, gesperrt, herabgestuft oder gelöscht werden."
 )
-
-
-def _next_color(db: Session) -> str:
-    used = set(db.scalars(select(User.color)).all())
-    for color in DEFAULT_COLORS:
-        if color not in used:
-            return color
-    return DEFAULT_COLORS[0]
 
 
 def _active_admin_ids(db: Session) -> list[int]:
@@ -69,7 +62,7 @@ def create_user(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> UserOut:
-    if db.scalar(select(User).where(User.display_name == body.display_name)):
+    if db.scalar(select(User).where(func.lower(User.display_name) == body.display_name.lower())):
         raise HTTPException(status_code=409, detail="Dieser Anzeigename ist bereits vergeben.")
     if db.scalar(select(User).where(User.email == body.email)):
         raise HTTPException(status_code=409, detail="Diese E-Mail-Adresse ist bereits vergeben.")
@@ -81,7 +74,7 @@ def create_user(
         role=body.role,
         approved=True,
         active=True,
-        color=body.color or _next_color(db),
+        color=body.color or next_color(db),
     )
     db.add(user)
     db.commit()
@@ -101,7 +94,9 @@ def update_user(
         raise HTTPException(status_code=404, detail="Nutzer nicht gefunden.")
 
     if body.display_name is not None and body.display_name != user.display_name:
-        if db.scalar(select(User).where(User.display_name == body.display_name, User.id != user_id)):
+        if db.scalar(
+            select(User).where(func.lower(User.display_name) == body.display_name.lower(), User.id != user_id)
+        ):
             raise HTTPException(status_code=409, detail="Dieser Anzeigename ist bereits vergeben.")
         user.display_name = body.display_name
     if body.email is not None and body.email != user.email:
@@ -128,6 +123,8 @@ def update_user(
         user.color = body.color
     if body.password is not None:
         user.password_hash = hash_password(body.password)
+        # Beendet alle vorher ausgestellten Sessions des Nutzers (iat-Vergleich in deps).
+        user.password_changed_at = utcnow()
 
     db.commit()
     db.refresh(user)
@@ -148,9 +145,11 @@ def delete_user(
     new_owner = actor
     if actor.id == user_id:
         replacement_id = next((admin_id for admin_id in _active_admin_ids(db) if admin_id != user_id), None)
-        assert replacement_id is not None
+        if replacement_id is None:
+            raise RuntimeError("Kein vorhandener Administrator kann die Projekte übernehmen.")
         replacement = db.get(User, replacement_id)
-        assert replacement is not None
+        if replacement is None:
+            raise RuntimeError("Ersatz-Administrator nicht gefunden.")
         new_owner = replacement
 
     owned_projects = db.scalars(select(Project).where(Project.owner_id == user_id)).all()
@@ -167,9 +166,7 @@ def delete_user(
         ):
             db.add(ProjectMember(project_id=project.id, user_id=new_owner.id))
 
-    for booking in db.scalars(select(Booking).where(Booking.user_id == user_id)).all():
-        db.delete(booking)
-
+    db.execute(delete(Booking).where(Booking.user_id == user_id).execution_options(synchronize_session=False))
     db.execute(delete(ProjectMember).where(ProjectMember.user_id == user_id))
     db.delete(user)
     db.commit()

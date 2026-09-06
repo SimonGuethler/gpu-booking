@@ -103,7 +103,7 @@ def test_current_unversioned_database_is_adopted(tmp_path):
 
     with engine.connect() as connection:
         revision = connection.scalar(sa.text("SELECT version_num FROM alembic_version"))
-    assert revision == "20260824_0004"
+    assert revision == "20260906_0005"
 
 
 def test_known_legacy_database_is_upgraded_without_data_loss(tmp_path):
@@ -130,6 +130,7 @@ def test_known_legacy_database_is_upgraded_without_data_loss(tmp_path):
     assert "display_name" in {column["name"] for column in inspector.get_columns("users")}
     assert "approved" in {column["name"] for column in inspector.get_columns("users")}
     assert "active" in {column["name"] for column in inspector.get_columns("users")}
+    assert "password_changed_at" in {column["name"] for column in inspector.get_columns("users")}
     assert "server_id" in {column["name"] for column in inspector.get_columns("bookings")}
     booking_columns = {column["name"] for column in inspector.get_columns("bookings")}
     assert {

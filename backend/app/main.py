@@ -24,8 +24,6 @@ def seed_admin() -> None:
     try:
         if db.scalar(select(User.id).limit(1)) is not None:
             return
-        if db.scalar(select(User).where(User.email == settings.seed_admin_email.strip().lower())):
-            return
         db.add(
             User(
                 display_name=settings.seed_admin_display_name.strip(),
@@ -33,6 +31,7 @@ def seed_admin() -> None:
                 password_hash=hash_password(settings.seed_admin_password),
                 role="admin",
                 color="#8b5cf6",
+                approved=True,
             )
         )
         db.commit()

@@ -24,14 +24,24 @@
       ref="drawerBody"
       class="drawer-body"
     >
-      <Message
-        v-if="formError"
-        severity="error"
-        :closable="false"
-        class="drawer-error"
+      <div
+        class="collapse"
+        :class="{ open: formError !== null }"
       >
-        {{ formError }}
-      </Message>
+        <div
+          class="collapse-inner"
+          :inert="formError === null"
+        >
+          <Message
+            v-if="formError"
+            severity="error"
+            :closable="false"
+            class="drawer-error"
+          >
+            {{ formError }}
+          </Message>
+        </div>
+      </div>
 
       <div class="field-block">
         <label class="field-label">Modus</label>
@@ -111,51 +121,55 @@
             Serien bestehen aus täglichen Zeitfenstern – „Durchgehend“ ist bei Serien nicht möglich.
           </small>
           <div
-            v-if="values.schedule === 'daily'"
-            class="daily-time-row"
+            class="collapse"
+            :class="{ open: values.schedule === 'daily' }"
           >
-            <label class="time-field">
-              <span>Täglich von</span>
-              <DatePicker
-                v-model="dailyStartPicker"
-                v-bind="dailyStartAttrs"
-                time-only
-                hour-format="24"
-                :step-minute="60"
-                :manual-input="false"
-                show-icon
-                fluid
-              />
-            </label>
-            <label class="time-field">
-              <span>Bis</span>
-              <DatePicker
-                v-model="dailyEndPicker"
-                v-bind="dailyEndAttrs"
-                time-only
-                hour-format="24"
-                :step-minute="60"
-                :manual-input="false"
-                show-icon
-                fluid
-              />
-            </label>
+            <div
+              class="collapse-inner"
+              :inert="values.schedule !== 'daily'"
+            >
+              <div class="daily-time-row">
+                <label class="time-field">
+                  <span>Täglich von</span>
+                  <DatePicker
+                    v-model="dailyStartPicker"
+                    v-bind="dailyStartAttrs"
+                    time-only
+                    hour-format="24"
+                    :step-minute="60"
+                    :manual-input="false"
+                    show-icon
+                    fluid
+                  />
+                </label>
+                <label class="time-field">
+                  <span>Bis</span>
+                  <DatePicker
+                    v-model="dailyEndPicker"
+                    v-bind="dailyEndAttrs"
+                    time-only
+                    hour-format="24"
+                    :step-minute="60"
+                    :manual-input="false"
+                    show-icon
+                    fluid
+                  />
+                </label>
+              </div>
+              <small
+                v-if="errors.dailyStart"
+                class="field-error"
+              >{{ errors.dailyStart }}</small>
+              <small
+                v-else-if="errors.dailyEnd"
+                class="field-error"
+              >{{ errors.dailyEnd }}</small>
+              <small class="hint">
+                Pro Kalendertag wird ein Zeitfenster erstellt. Am ersten und letzten Tag gelten
+                zusätzlich die oben gewählten Grenzen.
+              </small>
+            </div>
           </div>
-          <small
-            v-if="errors.dailyStart"
-            class="field-error"
-          >{{ errors.dailyStart }}</small>
-          <small
-            v-else-if="errors.dailyEnd"
-            class="field-error"
-          >{{ errors.dailyEnd }}</small>
-          <small
-            v-if="values.schedule === 'daily'"
-            class="hint"
-          >
-            Pro Kalendertag wird ein Zeitfenster erstellt. Am ersten und letzten Tag gelten
-            zusätzlich die oben gewählten Grenzen.
-          </small>
         </div>
         <small
           v-if="errors.start"
@@ -215,7 +229,7 @@
             outlined
             aria-label="Neues Projekt"
             title="Neues Projekt anlegen"
-            @click="showNewProject = true"
+            @click="openNewProject"
           />
         </div>
         <small
@@ -225,83 +239,97 @@
         <small class="hint">Buchungen dürfen nur vom Ersteller oder von Admins bearbeitet werden.</small>
       </div>
 
-      <div
-        v-if="values.mode !== 'cpu'"
-        class="field-block"
-      >
-        <div class="field-label-row">
-          <label class="field-label">GPUs</label>
-          <span class="hint">{{ selectedGpuCount }} gewählt</span>
-        </div>
-        <Message
-          v-if="hasLegacyCrossServerGpus"
-          severity="warn"
-          :closable="false"
-          class="legacy-gpu-warning"
-        >
-          Diese ältere Buchung enthält GPUs anderer Server. Beim Speichern wird sie auf
-          {{ activeServer?.name ?? 'den aktiven Server' }} beschränkt.
-        </Message>
+      <div class="field-block">
         <div
-          v-if="gpuGroups.length === 0"
-          class="empty-note"
+          class="collapse"
+          :class="{ open: values.mode !== 'cpu' }"
         >
-          Keine aktiven GPUs vorhanden – bitte einen Admin um neue Server/GPUs bitten.
-        </div>
-        <div
-          v-for="group in gpuGroups"
-          :key="group.serverId"
-          class="gpu-group"
-        >
-          <div class="gpu-group-name">
-            {{ group.serverName }}
-          </div>
-          <div class="gpu-grid">
-            <label
-              v-for="gpu in group.gpus"
-              :key="gpu.id"
-              class="gpu-chip"
-              :class="{
-                selected: (values.gpuIds ?? []).includes(gpu.id),
-                inactive: !gpu.active,
-              }"
+          <div
+            class="collapse-inner"
+            :inert="values.mode === 'cpu'"
+          >
+            <div class="field-label-row">
+              <label class="field-label">GPUs</label>
+              <span class="hint">{{ selectedGpuCount }} gewählt</span>
+            </div>
+            <Message
+              v-if="hasLegacyCrossServerGpus"
+              severity="warn"
+              :closable="false"
+              class="legacy-gpu-warning"
             >
-              <input
-                v-model="gpuIds"
-                type="checkbox"
-                :value="gpu.id"
-                class="gpu-checkbox"
-              />
-              <span class="gpu-chip-label">{{ gpu.name }}</span>
-              <span
-                v-if="!gpu.active"
-                class="gpu-chip-status"
-              >inaktiv</span>
-              <span
-                v-if="gpu.memory_mb != null"
-                class="gpu-chip-memory"
-              >
-                {{ Math.round(gpu.memory_mb / 1024) }} GB
-              </span>
-            </label>
+              Diese ältere Buchung enthält GPUs anderer Server. Beim Speichern wird sie auf
+              {{ activeServer?.name ?? 'den aktiven Server' }} beschränkt.
+            </Message>
+            <div
+              v-if="gpuGroups.length === 0"
+              class="empty-note"
+            >
+              Keine aktiven GPUs vorhanden – bitte einen Admin um neue Server/GPUs bitten.
+            </div>
+            <div
+              v-for="group in gpuGroups"
+              :key="group.serverId"
+              class="gpu-group"
+            >
+              <div class="gpu-group-name">
+                {{ group.serverName }}
+              </div>
+              <div class="gpu-grid">
+                <label
+                  v-for="gpu in group.gpus"
+                  :key="gpu.id"
+                  class="gpu-chip"
+                  :class="{
+                    selected: (values.gpuIds ?? []).includes(gpu.id),
+                    inactive: !gpu.active,
+                  }"
+                >
+                  <input
+                    v-model="gpuIds"
+                    type="checkbox"
+                    :value="gpu.id"
+                    class="gpu-checkbox"
+                  />
+                  <span class="gpu-chip-label">{{ gpu.name }}</span>
+                  <span
+                    v-if="!gpu.active"
+                    class="gpu-chip-status"
+                  >inaktiv</span>
+                  <span
+                    v-if="gpu.memory_mb != null"
+                    class="gpu-chip-memory"
+                  >
+                    {{ Math.round(gpu.memory_mb / 1024) }} GB
+                  </span>
+                </label>
+              </div>
+            </div>
+            <small
+              v-if="errors.gpuIds"
+              class="field-error"
+            >{{ errors.gpuIds }}</small>
           </div>
         </div>
-        <small
-          v-if="errors.gpuIds"
-          class="field-error"
-        >{{ errors.gpuIds }}</small>
       </div>
 
-      <div
-        v-else
-        class="field-block"
-      >
-        <label class="field-label">Server</label>
-        <div class="locked-server">
-          <i class="pi pi-lock" />
-          <span>{{ activeServer?.name ?? 'Ausgewählter Kalender-Server' }}</span>
+      <div class="field-block">
+        <div
+          class="collapse"
+          :class="{ open: values.mode === 'cpu' }"
+        >
+          <div
+            class="collapse-inner"
+            :inert="values.mode !== 'cpu'"
+          >
+            <label class="field-label">Server</label>
+            <div class="locked-server">
+              <i class="pi pi-lock" />
+              <span>{{ activeServer?.name ?? 'Ausgewählter Kalender-Server' }}</span>
+            </div>
+            <small class="hint">Der Server wird aus dem geöffneten Kalender übernommen.</small>
+          </div>
         </div>
-        <small class="hint">Der Server wird aus dem geöffneten Kalender übernommen.</small>
       </div>
 
       <div class="field-block">
@@ -422,7 +450,6 @@ import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import Textarea from 'primevue/textarea'
 import { useConfirm } from 'primevue/useconfirm'
-import { useToast } from 'primevue/usetoast'
 import { useForm } from 'vee-validate'
 
 import type { Booking, BookingConflictDetail, Gpu } from '../api/types'
@@ -433,6 +460,7 @@ import { MODE_LABELS, modeLabel } from '../booking/modes'
 import { filterGpuIdsForServer } from '../booking/resources'
 import { formatLocalDateTimeRange, toNaiveUtc } from '../calendar/logic'
 import type { BookingDraft } from '../calendar/logic'
+import { useNotify } from '../composables/useNotify'
 import { useServerData } from '../composables/useServerData'
 import { useAppConfig, useInvalidateAll, useUserDirectory } from '../composables/useApi'
 import { useAuthStore } from '../stores/auth'
@@ -458,7 +486,6 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
-const toast = useToast()
 const confirm = useConfirm()
 const isAdmin = computed(() => auth.user?.role === 'admin')
 const isEditMode = computed(() => props.drawerMode === 'edit')
@@ -477,9 +504,7 @@ const userDirectoryQuery = useUserDirectory()
 const users = computed(() => userDirectoryQuery.data.value ?? [])
 const invalidateAll = useInvalidateAll()
 
-function notify(severity: 'success' | 'error', summary: string, detail = ''): void {
-  toast.add({ severity, summary, detail, life: 3500 })
-}
+const notify = useNotify()
 
 const visibleModel = computed({
   get: () => props.visible,
@@ -726,6 +751,14 @@ async function showFormError(message: string): Promise<void> {
   await nextTick()
   const scrollContainer = drawerBody.value?.closest('.p-drawer-content') as HTMLElement | null
   scrollContainer?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function openNewProject(): void {
+  const userId = auth.user?.id
+  if (userId !== undefined && !newProject.value.memberIds.includes(userId)) {
+    newProject.value.memberIds.push(userId)
+  }
+  showNewProject.value = true
 }
 
 async function createProject(): Promise<void> {

@@ -77,6 +77,16 @@ def test_create_user_duplicate_display_name(client, admin):
     assert res.status_code == 409
 
 
+def test_create_user_duplicate_display_name_case_insensitive(client, admin, alice):
+    headers = auth_headers(client, "admin")
+    res = client.post(
+        "/api/users",
+        json={"display_name": "ALICE", "email": "andere@example.com", "password": "geheim123"},
+        headers=headers,
+    )
+    assert res.status_code == 409
+
+
 def test_create_user_duplicate_email(client, admin):
     headers = auth_headers(client, "admin")
     res = client.post(
@@ -315,6 +325,43 @@ def test_reset_password(client, admin, alice):
     assert res.status_code == 200
     login_res = client.post(
         "/api/auth/login", json={"email": "alice@example.local", "password": "neuespasswort"}
+    )
+    assert login_res.status_code == 200
+
+
+def test_reset_password_invalidates_existing_sessions(client, admin, alice):
+    alice_headers = auth_headers(client, "alice")
+
+    res = client.patch(
+        f"/api/users/{alice.id}",
+        json={"password": "neuespasswort"},
+        headers=auth_headers(client, "admin"),
+    )
+    assert res.status_code == 200
+
+    old_session = client.get("/api/auth/me", headers=alice_headers)
+    assert old_session.status_code == 401
+    assert "Passwortänderung" in old_session.json()["detail"]
+
+    # Neue Anmeldung mit dem neuen Passwort stellt eine gültige Session wieder her.
+    assert (
+        client.get("/api/auth/me", headers=auth_headers(client, "alice", "neuespasswort")).status_code == 200
+    )
+
+
+def test_admin_self_password_change_invalidates_old_sessions(client, admin):
+    old_headers = auth_headers(client, "admin")
+
+    res = client.patch(
+        f"/api/users/{admin.id}",
+        json={"password": "neuespasswort"},
+        headers=old_headers,
+    )
+    assert res.status_code == 200
+
+    assert client.get("/api/auth/me", headers=old_headers).status_code == 401
+    login_res = client.post(
+        "/api/auth/login", json={"email": "admin@example.local", "password": "neuespasswort"}
     )
     assert login_res.status_code == 200
 

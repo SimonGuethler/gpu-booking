@@ -1,1 +1,1 @@
-from app.services import bookings  # noqa: F401
+from app.services import bookings, users  # noqa: F401

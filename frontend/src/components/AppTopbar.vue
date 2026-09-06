@@ -137,8 +137,8 @@ async function onLogout(): Promise<void> {
   cursor: pointer;
   user-select: none;
   border-radius: var(--app-radius-sm);
-  padding: 0.25rem 0.5rem;
-  margin-left: -0.5rem;
+  padding: 0.25rem;
+  margin-left: -0.25rem;
   transition: background 0.12s ease;
 }
 
@@ -184,13 +184,19 @@ async function onLogout(): Promise<void> {
 }
 
 .topbar-nav {
+  --nav-radius: 0.8rem;
+  --nav-padding: 0.2rem;
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.2rem;
+  padding: var(--nav-padding);
   border: 1px solid var(--c-border-subtle);
-  border-radius: 0.8rem;
+  border-radius: var(--nav-radius);
   background: var(--c-bg-elevated);
+}
+
+.topbar-nav .nav-button {
+  border-radius: calc(var(--nav-radius) - var(--nav-padding) - 1px);
 }
 
 .topbar-actions {

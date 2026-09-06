@@ -4,6 +4,7 @@ os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["JWT_SECRET"] = "test-secret-test-secret-test-secret-123"
 os.environ["JWT_EXPIRE_DAYS"] = "90"
 os.environ["SEED_ADMIN_PASSWORD"] = ""
+os.environ.setdefault("PBKDF2_ITERATIONS", "1000")
 
 import pytest
 from alembic import command
@@ -12,7 +13,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import alembic_config, get_db
+from app.database import Base, alembic_config, get_db
 from app.main import create_app
 from app.models import User
 from app.security import AUTH_COOKIE_NAME, hash_password
@@ -23,17 +24,31 @@ TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commi
 PASSWORD = "password123"
 
 
-@pytest.fixture(autouse=True)
-def _fresh_db():
+@pytest.fixture(autouse=True, scope="session")
+def _schema():
+    """Alembic-Schema einmal pro (xdist-)Worker-Prozess aufbauen."""
     config = alembic_config()
     with engine.connect() as connection:
         config.attributes["connection"] = connection
         command.upgrade(config, "head")
     yield
-    config = alembic_config()
-    with engine.connect() as connection:
-        config.attributes["connection"] = connection
-        command.downgrade(config, "base")
+
+
+@pytest.fixture(autouse=True)
+def _fresh_db(_schema):
+    """Nur Daten leeren statt Schema pro Test über Alembic neu aufzubauen."""
+    with engine.begin() as connection:
+        for table in reversed(Base.metadata.sorted_tables):
+            connection.execute(table.delete())
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _skip_lifespan_migration(monkeypatch):
+    # Der Lifespan-Upgrade läuft in Tests gegen eine ungenutzte Wegwerf-Engine.
+    # Migrationen werden durch test_migrations.py und _schema abgedeckt.
+    monkeypatch.setattr("app.main.upgrade_db", lambda: None)
+    yield
 
 
 def _override_db():
@@ -68,6 +83,7 @@ def create_user(
         password_hash=hash_password(password),
         role=role,
         color=color or "#8b5cf6",
+        approved=True,
     )
     db.add(user)
     db.commit()

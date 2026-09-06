@@ -247,10 +247,12 @@ const serverData = useServerData()
 const servers = computed<Server[]>(() =>
   (serverData.servers.value ?? []).filter((server) => server.active),
 )
-const loading = computed(() => serverData.serversLoading.value)
-
 const { todayStart, todayEnd } = useToday()
 const todayQuery = useBookings(() => todayStart.value, () => todayEnd.value)
+
+const loading = computed(
+  () => serverData.serversLoading.value || todayQuery.isPending.value,
+)
 const todayBookings = computed<Booking[]>(() => todayQuery.data.value ?? [])
 const unassignedCpuBookings = computed(() =>
   todayBookings.value.filter((booking) => booking.mode === 'cpu' && booking.server_id === null),

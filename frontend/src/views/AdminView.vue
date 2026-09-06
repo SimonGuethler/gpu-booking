@@ -374,6 +374,7 @@
               :max="gpuMemoryGbMax"
               class="w-full"
               placeholder="z. B. 40"
+              @input="gpuDialog.memoryMbTouched = true"
             />
           </div>
           <div
@@ -620,11 +621,11 @@ import Tabs from 'primevue/tabs'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import { useConfirm } from 'primevue/useconfirm'
-import { useToast } from 'primevue/usetoast'
 
 import type { Gpu, Project, Server, User } from '../api/types'
 import { ApiRequestError, del, patch, post } from '../api/client'
 import { useAppConfig, useColors, useInvalidateAll, useUsers } from '../composables/useApi'
+import { useNotify } from '../composables/useNotify'
 import { useServerData } from '../composables/useServerData'
 import AppTopbar from '../components/AppTopbar.vue'
 
@@ -638,7 +639,6 @@ const activeTab = computed<AdminTab>({
     void router.push({ name: `admin-${tab}` })
   },
 })
-const toast = useToast()
 const confirm = useConfirm()
 const { servers, projects, serversLoading, projectsLoading } = useServerData()
 const usersQuery = useUsers()
@@ -659,9 +659,7 @@ const invalidateAll = useInvalidateAll()
 
 const saving = ref(false)
 
-function notify(severity: 'success' | 'error', summary: string, detail = ''): void {
-  toast.add({ severity, summary, detail, life: 3500 })
-}
+const notify = useNotify()
 
 async function runSaving(action: () => Promise<void>): Promise<boolean> {
   saving.value = true
@@ -700,6 +698,8 @@ const gpuDialog = reactive({
   serverName: '',
   name: '',
   memoryMb: null as number | null,
+  memoryMbOriginal: null as number | null,
+  memoryMbTouched: false,
   active: true,
 })
 
@@ -806,14 +806,26 @@ function showGpuDialog(server: Server, gpu: Gpu | null): void {
   gpuDialog.serverId = server.id
   gpuDialog.serverName = server.name
   gpuDialog.name = gpu?.name ?? ''
+  gpuDialog.memoryMbOriginal = gpu?.memory_mb ?? null
   gpuDialog.memoryMb = gpu?.memory_mb != null ? Math.round(gpu.memory_mb / 1024) : null
+  gpuDialog.memoryMbTouched = false
   gpuDialog.active = gpu?.active ?? true
   gpuDialog.visible = true
 }
 
+function resolveMemoryMb(): number | null {
+  const gb = gpuDialog.memoryMb
+  if (gb == null) return null
+  // Bei unveränderter Eingabe den exakten Originalwert behalten (keine Rundungsdrift).
+  if (!gpuDialog.memoryMbTouched && gpuDialog.memoryMbOriginal != null) {
+    return gpuDialog.memoryMbOriginal
+  }
+  return Math.round(gb * 1024)
+}
+
 async function saveGpu(): Promise<void> {
   const ok = await runSaving(async () => {
-    const memoryMb = gpuDialog.memoryMb != null ? Math.round(gpuDialog.memoryMb * 1024) : null
+    const memoryMb = resolveMemoryMb()
     if (gpuDialog.editing) {
       await patch(`/gpus/${gpuDialog.id}`, {
         name: gpuDialog.name.trim(),

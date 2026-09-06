@@ -63,7 +63,7 @@ describe('Cookie-Session im Auth-Store', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ access_token: 'api-token', token_type: 'bearer', user: USER }), {
+        new Response(JSON.stringify({ user: USER }), {
           status: 200,
           headers: { 'X-CSRF-Token': 'csrf-token' },
         }),

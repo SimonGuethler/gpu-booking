@@ -4,12 +4,18 @@ WORKDIR /app
 
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
+RUN useradd --system --home /app --no-create-home --shell /usr/sbin/nologin appuser
+
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
+
+RUN chown -R appuser /app
+
+USER appuser
 
 EXPOSE 8000
 

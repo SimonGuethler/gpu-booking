@@ -178,11 +178,9 @@ def create_booking(
         start_at=start_at,
         end_at=end_at,
         description=description,
+        gpus=[models.BookingGpu(gpu_id=gpu.id) for gpu in gpus],
     )
     db.add(booking)
-    db.flush()
-    for gpu in gpus:
-        db.add(models.BookingGpu(booking_id=booking.id, gpu_id=gpu.id))
     db.commit()
     db.refresh(booking)
     return booking
@@ -239,8 +237,8 @@ def create_booking_series(
             daily_start_hour=daily_start_hour,
             daily_end_hour=daily_end_hour,
             description=description,
+            gpus=[models.BookingGpu(gpu_id=gpu.id) for gpu in gpus],
         )
-        booking.gpus = [models.BookingGpu(gpu_id=gpu.id) for gpu in gpus]
         db.add(booking)
         bookings.append(booking)
 
@@ -268,7 +266,8 @@ def update_booking_series(
 ) -> list[models.Booking]:
     first_booking = bookings[0]
     series_id = first_booking.series_id
-    assert series_id is not None
+    if series_id is None:
+        raise RuntimeError("Serien-Edit ohne Serien-ID ist nicht erlaubt.")
     existing_ids = {booking.id for booking in bookings}
     existing_gpu_ids = {link.gpu_id for booking in bookings for link in booking.gpus}
     gpus, server = validate_input(

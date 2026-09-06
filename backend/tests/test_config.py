@@ -1,9 +1,27 @@
+import pytest
+from pydantic import ValidationError
+
 from app.config import Settings
 from tests.conftest import login
 
 
 def test_config_requires_authentication(client):
     assert client.get("/api/config").status_code == 401
+
+
+def test_cors_wildcard_origin_is_rejected():
+    with pytest.raises(ValidationError, match="CORS_ORIGINS"):
+        Settings(_env_file=None, cors_origins="*")
+
+
+def test_cors_wildcard_between_origins_is_rejected():
+    with pytest.raises(ValidationError, match="CORS_ORIGINS"):
+        Settings(_env_file=None, cors_origins="http://a.local, , *")
+
+
+def test_cors_origins_still_accept_concrete_origins():
+    settings = Settings(_env_file=None, cors_origins="http://a.local:5173, http://a.local:80")
+    assert settings.cors_origin_list == ["http://a.local:5173", "http://a.local:80"]
 
 
 def test_config_returns_booking_limit(client, alice):

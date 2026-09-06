@@ -58,11 +58,39 @@ npm install
 npm run dev        # http://localhost:5173, Proxyt /api -> :8000
 ```
 
+### Tests
+
+Der Testaufbau wurde auf das Minimum gebracht: Alembic-Schema einmal pro Worker-Prozess,
+je Test nur Zeilen geleert statt Schema über Alembic neu auf-/abgebaut, und der
+Lifespan-Upgrade des Appsrvices läuft in Tests nicht (Test-DB ist bereits migriert).
+Damit ist die Suite von ~42 s (Serial, vorher) auf ~6 s geschrumpft.
+
+pytest-xdist steht bereit; auf Maschinen mit langsamen Dateisystemen sind die
+Spawn-/Importkosten der Worker größer als der Gewinn (gemessen: serial 18 s,
+`-n 2/4` ~24 s, `-n auto` ~27 s). Bei größerer Suite oder schnellerem FS lohnt:
+
+```bash
+uv run pytest -n auto           # Kerne automatisch (physical count)
+uv run pytest -n logical        # logische Kerne (Python 3.13+ oder psutil)
+uv run pytest --dist=worksteal  # dynamische Lastverteilung
+```
+
+PBKDF2-Iterationen sind über `PBKDF2_ITERATIONS` konfigurierbar (Default 260_000;
+Tests setzen 1_000). Hashes im neuen Format (`pbkdf2_sha256$…`) merken sich ihre
+Iterationszahl und bleiben auch bei einer Änderung der Umgebungsvariable gültig;
+legacy-Hashes (`salt$digest`) stammen aus der ersten Version und verifizieren mit
+ihrer ursprünglichen Iterationszahl (260 000) – auch wenn die Einstellung geändert
+wurde. Bei jeder erfolgreichen Anmeldung werden legacy-Format und veraltete
+Iterationszahlen automatisch auf das aktuelle Format migriert (`needs_rehash`).
+Vitest im Frontend ist pro
+Datei bereits parallel; für mehrere
+CI-Runner stehen die npm-Skripte `test:shard`/`test:merge` bereit.
+
 ### Gates
 
 | Bereich | Befehl |
 |---|---|
-| Backend-Tests | `uv run pytest` (Backend) |
+| Backend-Tests | `uv run pytest` (Backend; optional pytest-xdist, siehe oben) |
 | Lint/Format | `uv run ruff check . && uv run ruff format --check .` |
 | Typecheck | `npm run typecheck` (Frontend) |
 | Lint | `npm run lint` |
@@ -80,9 +108,10 @@ Siehe `.env.example` (Wurzel für Compose) und `backend/.env.example`.
 | `DATABASE_URL` | SQLAlchemy-URL; Default `sqlite:///./gpu_booking.db` |
 | `JWT_SECRET` | Signierschlüssel (Pflicht im Compose-Betrieb; zufällig und ausreichend lang wählen) |
 | `JWT_EXPIRE_DAYS` | Token-Gültigkeit (Default 90) |
+| `PBKDF2_ITERATIONS` | PBKDF2-Iterationen für Passwort-Hashes; Default `260000` |
 | `AUTH_COOKIE_SECURE` | Bei HTTPS auf `true`; beschränkt das HttpOnly-Session-Cookie auf TLS |
 | `MAX_BOOKING_DAYS` | Maximale Buchungsdauer regulärer Nutzer in ganzen Tagen; Default `7`, Admins unbegrenzt |
-| `CORS_ORIGINS` | Erlaubte Frontend-Origins, kommasepariert |
+| `CORS_ORIGINS` | Erlaubte Frontend-Origins, kommasepariert (`"*"` wird beim Start abgelehnt) |
 | `VITE_API_BASE_URL` | API-Basis-URL des Frontends; Standard `/api` nutzt den nginx-Proxy. Wird beim Frontend-Image-Build eingebettet. |
 | `SEED_ADMIN_DISPLAY_NAME/PASSWORD/EMAIL` | Erster Admin, nur bei leerer Nutzertabelle |
 
@@ -95,6 +124,26 @@ CSRF-Header; das JWT wird nicht im Web Storage gespeichert. Frontend und API sol
 same-site ausgeliefert werden. Bei einer HTTPS-Bereitstellung muss `AUTH_COOKIE_SECURE=true`
 gesetzt sein. Beim Umstieg von einer älteren Version sollte `JWT_SECRET` einmalig rotiert werden,
 damit zuvor im Browser gespeicherte Tokens sofort ungültig sind.
+
+## Sicherheit
+
+- **Passwortwechsel beenden Sessions:** Ein Passwort-Reset (auch der eigene, über die
+  Admin-Verwaltung) setzt `users.password_changed_at` und damit werden alle zuvor
+  ausgestellten Session-Cookies beim nächsten Request mit 401 abgewiesen; die betroffene
+  Person meldet sich einfach neu an. Bestehende Cookies bleiben nach einem Version-Upgrade
+  gültig: Die Spalte ist initial `NULL` und wird erst von der nächsten Passwortänderung
+  gefüllt.
+- **Keine Rate-Limits:** `/auth/login` und `/auth/register` sind nicht ratenlimitiert
+  (Password Hashing kostet pro Request bewusst Rechenzeit). Das System ist für
+  LAN-/VPN-Betrieb konzipiert; nicht direkt ins Internet exponieren.
+- **CORS:** `CORS_ORIGINS="*"` wird beim Start abgelehnt, da Session-Cookies per CORS mit
+  Anmeldeinformationen gesendet werden; konfiguriere die konkreten Origins.
+- **Cookies/HTTPS:** Auth-Cookie ist `HttpOnly`, `SameSite=Strict`. `AUTH_COOKIE_SECURE=true`
+  erst aktivieren, wenn das Deployment hinter TLS steht (unter reinem HTTP würden die
+  Cookies sonst nicht mehr gesendet).
+- **Hash-Migration:** Legacy-Passwort-Hashes werden bei erfolgreicher Anmeldung ohne
+  Auswirkung auf bestehende Sessions auf das aktuelle Format (merkt sich die
+  Iterationszahl) migriert.
 
 ## Datenbankmigrationen
 

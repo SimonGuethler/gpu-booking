@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import DEFAULT_COLORS, User
+from app.models import User
 from app.schemas import (
     LoginRequest,
     RegistrationCreate,
@@ -20,16 +20,13 @@ from app.security import (
     create_access_token,
     generate_csrf_token,
     hash_password,
+    needs_rehash,
     verify_csrf_token,
     verify_password,
 )
+from app.services.users import next_color
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def _next_color(db: Session) -> str:
-    used = set(db.scalars(select(User.color)).all())
-    return next((color for color in DEFAULT_COLORS if color not in used), DEFAULT_COLORS[0])
 
 
 def _set_cookie(response: Response, name: str, value: str, *, httponly: bool) -> None:
@@ -70,18 +67,21 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_db))
             status_code=403,
             detail="Dein Konto wartet noch auf die Freigabe durch einen Administrator.",
         )
+    if needs_rehash(user.password_hash):
+        user.password_hash = hash_password(body.password)
+        db.commit()
     csrf_token = generate_csrf_token()
-    access_token = create_access_token(user.id)
+    access_token = create_access_token(user.id, user.password_changed_at)
     _set_cookie(response, AUTH_COOKIE_NAME, access_token, httponly=True)
     _set_cookie(response, CSRF_COOKIE_NAME, csrf_token, httponly=False)
     response.headers["X-CSRF-Token"] = csrf_token
     response.headers["Cache-Control"] = "no-store"
-    return TokenResponse(access_token=access_token, user=UserOut.model_validate(user))
+    return TokenResponse(user=UserOut.model_validate(user))
 
 
 @router.post("/register", response_model=RegistrationResponse, status_code=201)
 def register(body: RegistrationCreate, db: Session = Depends(get_db)) -> RegistrationResponse:
-    if db.scalar(select(User).where(User.display_name == body.display_name)):
+    if db.scalar(select(User).where(func.lower(User.display_name) == body.display_name.lower())):
         raise HTTPException(status_code=409, detail="Dieser Anzeigename ist bereits vergeben.")
     if db.scalar(select(User).where(func.lower(User.email) == body.email)):
         raise HTTPException(status_code=409, detail="Diese E-Mail-Adresse ist bereits vergeben.")
@@ -94,7 +94,7 @@ def register(body: RegistrationCreate, db: Session = Depends(get_db)) -> Registr
             role="user",
             approved=False,
             active=True,
-            color=_next_color(db),
+            color=next_color(db),
         )
     )
     db.commit()
